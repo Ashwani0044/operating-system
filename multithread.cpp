@@ -3,19 +3,29 @@
 #include <functional>//functional is used for std::greater
 #include <vector>
 #include <thread>
+#include <mutex>
 
 using namespace std;
 
 queue<function<void()>> tasks;
+mutex mtx;
 
 void worker(int id) {
-    while(!tasks.empty()) {
+   while(true) {
+        mtx.lock();
+
+        if(tasks.empty()) {
+            mtx.unlock();
+            break; // No more tasks, exit the worker
+        }
+
         auto task = tasks.front();
         tasks.pop();
+        mtx.unlock();
 
         cout << "Worker " << id << " executing task...\n";
         task();
-    }
+   }
 }
 
 int main() {
