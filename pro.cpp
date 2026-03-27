@@ -1,6 +1,8 @@
 #include <iostream>
 #include <queue>
 #include <functional>//functional is used for std::greater
+#include <vector>
+#include <thread>
 
 using namespace std;
 
