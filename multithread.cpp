@@ -1,35 +1,37 @@
+// Multithreaded Task Scheduler in C++ 
+
 #include <iostream>
 #include <queue>
 #include <functional>//functional is used for std::greater
 #include <vector>
 #include <thread>
-#include <chrono>
-#include <mutex>
+#include <chrono>//it is used for defining time intervals, like i am using sleep duration for 2 sec ..
+#include <mutex>//it is used for locking and unlocking the critical section to prevent race conditions
 
 using namespace std;
 
-queue<function<void(int)>> tasks;
+queue<function<void(int)>> tasks;//to hold tasks, each task is a function that takes an int (thread id) as argument
 mutex mtx;
-mutex print_mtx;
-const int MAX_QUEUE_SIZE = 10;
+mutex print_mtx;//separate mutex for printing to avoid interleaved output
+const int MAX_QUEUE_SIZE = 10;//maximum tasks 
 
 void worker(int id) {
-   while(true) {
-        mtx.lock();
+   while(true) {//to run until there are no more tasks
+        mtx.lock();//locking the queue so that only one thread can access it at a time
 
         if(tasks.empty()) {
-            mtx.unlock();
+            mtx.unlock();//unlocking before exiting the worker thread
             break; // No more tasks, exit the worker
         }
 
         auto task = tasks.front();
         tasks.pop();
-        mtx.unlock();
+        mtx.unlock();//unlocking the queue so that other threads can access it
         {
-        lock_guard<mutex> lock(print_mtx);
+        lock_guard<mutex> lock(print_mtx);//lock_guard will automatically release the lock when it goes out of scope
         cout << "[Thread " << id << "] picked a task\n";
         }
-        task(id);
+        task(id);//passing thread id as an argument..
    }
 }
 
@@ -40,7 +42,7 @@ int main() {
         if (tasks.size() < MAX_QUEUE_SIZE) {
             tasks.push([i](int threadId) {
                 string requestType;
-
+                //just to simulate different types of requests, i am using the modulus operator to assign a request type based on the task number
                 if (i % 3 == 0) requestType = "Login Request";
                 else if (i % 3 == 1) requestType = "Fetch Data Request";
                 else requestType = "Upload File Request";
@@ -60,16 +62,16 @@ int main() {
     }
     cout<<"ALL TASKS COMPLETED\n";
 
-    // Create threads
+    // creating threads
     vector<thread> workers;
 
     for (int i = 0; i < 3; i++) {
-        workers.emplace_back(worker, i);
+        workers.emplace_back(worker, i);//creating worker threads and passing the thread id as an argument
     }
 
     // Join threads
     for (auto &t : workers) {
-        t.join();
+        t.join();//waiting for all worker threads to finish before exiting the main thread
     }
 
     return 0;
@@ -87,38 +89,38 @@ int main() {
 
 //QUESTIONS FROM AI.....
 
-// ❓ Q1: Why did you use multithreading?
+// Q1: Why did you use multithreading?
 
-// 👉 Answer:
+// Answer:
 
 // “To simulate concurrent execution, like how servers handle multiple users at the same time. A single thread would process tasks sequentially, which is inefficient.”
 
-// ❓ Q2: What problem did mutex solve?
+// Q2: What problem did mutex solve?
 
-// 👉 Answer:
+//  Answer:
 
 // “Multiple threads were accessing the shared queue, causing race conditions. Mutex ensures only one thread accesses it at a time, preventing data inconsistency.”
 
-// ❓ Q3: Why condition_variable?
+//  Q3: Why condition_variable?
 
-// 👉 Answer:
+//  Answer:
 
 // “Without it, threads keep checking the queue continuously, which wastes CPU (busy waiting). Condition variables allow threads to sleep and wake up only when tasks are available.”
 
-// ❓ Q4: Why unlock before executing task?
+//  Q4: Why unlock before executing task?
 
-// 👉 Answer (🔥 important):
+//  Answer (🔥 important):
 
 // “To minimize the critical section. If the lock is held during task execution, other threads would be blocked, reducing concurrency.”
 
-// ❓ Q5: What is a race condition in your project?
+//  Q5: What is a race condition in your project?
 
-// 👉 Answer:
+//  Answer:
 
 // “When multiple threads tried to access and modify the queue simultaneously, leading to unpredictable behavior.”
 
-// ❓ Q6: How is this related to real systems?
+//  Q6: How is this related to real systems?
 
-// 👉 Answer:
+//  Answer:
 
 // “This is similar to how web servers or cloud systems manage multiple incoming requests using thread pools and task queues.”
