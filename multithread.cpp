@@ -10,6 +10,7 @@ using namespace std;
 
 queue<function<void(int)>> tasks;
 mutex mtx;
+mutex print_mtx;
 const int MAX_QUEUE_SIZE = 10;
 
 void worker(int id) {
@@ -24,8 +25,10 @@ void worker(int id) {
         auto task = tasks.front();
         tasks.pop();
         mtx.unlock();
-
+        {
+        lock_guard<mutex> lock(print_mtx);
         cout << "[Thread " << id << "] picked a task\n";
+        }
         task(id);
    }
 }
@@ -41,17 +44,21 @@ int main() {
                 if (i % 3 == 0) requestType = "Login Request";
                 else if (i % 3 == 1) requestType = "Fetch Data Request";
                 else requestType = "Upload File Request";
-
+                {
+                lock_guard<mutex> lock(print_mtx);
                 cout << "[Thread " << threadId << "] " << requestType << " started\n";
-
+                }
                 this_thread::sleep_for(chrono::seconds(2));
-
+                {
+                lock_guard<mutex> lock(print_mtx);
                 cout << "[Thread " << threadId << "] " << requestType << " completed\n";
+                }
             });
         } else {
             cout << "Task queue is full. Cannot add more tasks.\n";
         }
     }
+    cout<<"ALL TASKS COMPLETED\n";
 
     // Create threads
     vector<thread> workers;
