@@ -4,11 +4,21 @@
 #include <queue>
 #include <functional>//functional is used for std::greater
 #include <vector>
+#include <ctime>
 #include <thread>
 #include <chrono>//it is used for defining time intervals, like i am using sleep duration for 2 sec ..
 #include <mutex>//it is used for locking and unlocking the critical section to prevent race conditions
 
 using namespace std;
+
+string getTime() {
+    auto now = chrono::system_clock::now();
+    time_t now_time = chrono::system_clock::to_time_t(now);
+
+    string timeStr = ctime(&now_time);
+    timeStr.pop_back(); // Remove the newline character added by ctime
+    return timeStr;
+}
 
 queue<function<void(int)>> tasks;//to hold tasks, each task is a function that takes an int (thread id) as argument
 mutex mtx;
@@ -29,11 +39,13 @@ void worker(int id) {
         mtx.unlock();//unlocking the queue so that other threads can access it
         {
         lock_guard<mutex> lock(print_mtx);//lock_guard will automatically release the lock when it goes out of scope
-        cout << "[Thread " << id << "] picked a task\n";
+        cout << "[" << getTime() << "] [Thread " << id << "] picked a task\n";
         }
         task(id);//passing thread id as an argument..
    }
 }
+
+
 
 int main() {
 
@@ -48,19 +60,19 @@ int main() {
                 else requestType = "Upload File Request";
                 {
                 lock_guard<mutex> lock(print_mtx);
-                cout << "[Thread " << threadId << "] " << requestType << " started\n";
+                cout << "[" << getTime() << "] [Thread " << threadId << "] " << requestType << " started\n";
                 }
-                this_thread::sleep_for(chrono::seconds(2));
+                this_thread::sleep_for(chrono::seconds(2));//sleep for 2 sec to simulate task processing time
                 {
                 lock_guard<mutex> lock(print_mtx);
-                cout << "[Thread " << threadId << "] " << requestType << " completed\n";
+                cout << "[" << getTime() << "] [Thread " << threadId << "] " << requestType << " completed\n";
                 }
             });
         } else {
             cout << "Task queue is full. Cannot add more tasks.\n";
         }
     }
-    cout<<"ALL TASKS COMPLETED\n";
+   
 
     // creating threads
     vector<thread> workers;
@@ -73,7 +85,6 @@ int main() {
     for (auto &t : workers) {
         t.join();//waiting for all worker threads to finish before exiting the main thread
     }
-
     return 0;
 }
 
